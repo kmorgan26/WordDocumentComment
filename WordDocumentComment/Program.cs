@@ -1,4 +1,7 @@
-﻿using DocumentFormat.OpenXml;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
@@ -6,57 +9,64 @@ class Program
 {
     static void Main(string[] args)
     {
-        Console.WriteLine("Enter the directory path containing Word documents:");
-        string directoryPath = Console.ReadLine();
+        Console.WriteLine("Enter the path to the first directory:");
+        string directory1 = Console.ReadLine();
 
-        if (Directory.Exists(directoryPath))
+        Console.WriteLine("Enter the path to the second directory:");
+        string directory2 = Console.ReadLine();
+
+        Console.WriteLine("Enter the path to the output directory for consolidated comments:");
+        string outputDirectory = Console.ReadLine();
+
+        if (Directory.Exists(directory1) && Directory.Exists(directory2))
         {
-            string[] files = Directory.GetFiles(directoryPath, "*.docx");
-
-            if (files.Length < 2)
+            if (!Directory.Exists(outputDirectory))
             {
-                Console.WriteLine("At least two Word documents are required for comparison.");
-                return;
+                Directory.CreateDirectory(outputDirectory);
             }
 
-            string file1 = files[0];
-            string file2 = files[1];
+            // Get all Word documents in the first directory
+            var filesInDir1 = Directory.GetFiles(directory1, "*.docx");
 
-            Console.WriteLine($"Comparing {file1} and {file2}...");
+            foreach (var file1 in filesInDir1)
+            {
+                string fileName = Path.GetFileName(file1);
+                string file2 = Path.Combine(directory2, fileName);
 
-            // Compare document content
-            var contentDifferences = CompareWordDocuments(file1, file2);
-            if (contentDifferences.Count == 0)
-            {
-                Console.WriteLine("No differences in document content found.");
-            }
-            else
-            {
-                Console.WriteLine("Differences in document content found:");
-                foreach (var diff in contentDifferences)
+                if (File.Exists(file2))
                 {
-                    Console.WriteLine(diff);
+                    Console.WriteLine($"Comparing {file1} and {file2}...");
+
+                    // Compare document content
+                    var contentDifferences = CompareWordDocuments(file1, file2);
+                    if (contentDifferences.Count == 0)
+                    {
+                        Console.WriteLine("No differences in document content found.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Differences in document content found:");
+                        foreach (var diff in contentDifferences)
+                        {
+                            Console.WriteLine(diff);
+                        }
+                    }
+
+                    // Consolidate comments into a new document
+                    string outputFilePath = Path.Combine(outputDirectory, $"ConsolidatedComments_{fileName}");
+                    ConsolidateComments(file1, file2, outputFilePath);
+
+                    Console.WriteLine($"Comments consolidated into {outputFilePath}");
                 }
-            }
-
-            // Compare comments
-            var commentDifferences = CompareComments(file1, file2);
-            if (commentDifferences.Count == 0)
-            {
-                Console.WriteLine("No differences in comments found.");
-            }
-            else
-            {
-                Console.WriteLine("Differences in comments found:");
-                foreach (var diff in commentDifferences)
+                else
                 {
-                    Console.WriteLine(diff);
+                    Console.WriteLine($"No matching file found in {directory2} for {fileName}");
                 }
             }
         }
         else
         {
-            Console.WriteLine("Directory does not exist.");
+            Console.WriteLine("One or both directories do not exist.");
         }
     }
 
@@ -76,77 +86,49 @@ class Program
         return differences;
     }
 
-    static List<string> CompareComments(string filePath1, string filePath2)
+    static void ConsolidateComments(string filePath1, string filePath2, string outputFilePath)
     {
-        var differences = new List<string>();
-
-        using (WordprocessingDocument doc1 = WordprocessingDocument.Open(filePath1, false))
-        using (WordprocessingDocument doc2 = WordprocessingDocument.Open(filePath2, false))
+        // Create a new Word document for consolidated comments
+        using (WordprocessingDocument newDoc = WordprocessingDocument.Create(outputFilePath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
         {
-            var comments1 = GetComments(doc1);
-            var comments2 = GetComments(doc2);
+            // Add main document part
+            var mainPart = newDoc.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body());
 
-            differences.AddRange(CompareCommentLists(comments1, comments2));
+            // Add comments part
+            var commentsPart = mainPart.AddNewPart<WordprocessingCommentsPart>();
+            commentsPart.Comments = new Comments();
+
+            // Extract comments from both documents and add them to the new document
+            AddCommentsFromDocument(filePath1, commentsPart, "Document 1");
+            AddCommentsFromDocument(filePath2, commentsPart, "Document 2");
+
+            // Save the new document
+            mainPart.Document.Save();
         }
-
-        return differences;
     }
 
-    static List<Comment> GetComments(WordprocessingDocument doc)
+    static void AddCommentsFromDocument(string filePath, WordprocessingCommentsPart commentsPart, string sourceDocumentName)
     {
-        var comments = new List<Comment>();
-
-        if (doc.MainDocumentPart.WordprocessingCommentsPart != null)
+        using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
         {
-            foreach (var comment in doc.MainDocumentPart.WordprocessingCommentsPart.Comments.Elements<Comment>())
+            if (doc.MainDocumentPart.WordprocessingCommentsPart != null)
             {
-                comments.Add(comment);
+                foreach (var comment in doc.MainDocumentPart.WordprocessingCommentsPart.Comments.Elements<Comment>())
+                {
+                    // Clone the comment and add metadata
+                    var newComment = new Comment
+                    {
+                        Id = comment.Id,
+                        Author = comment.Author,
+                        Date = comment.Date,
+                        Initials = comment.Initials
+                    };
+                    newComment.Append(new Paragraph(new Run(new Text($"From {sourceDocumentName}: {comment.InnerText}"))));
+                    commentsPart.Comments.Append(newComment);
+                }
             }
         }
-
-        return comments;
-    }
-    static List<string> CompareCommentLists(List<Comment> comments1, List<Comment> comments2)
-    {
-        var differences = new List<string>();
-
-        int index = 0;
-        while (index < comments1.Count && index < comments2.Count)
-        {
-            var comment1 = comments1[index];
-            var comment2 = comments2[index];
-
-            if (comment1.InnerText != comment2.InnerText)
-            {
-                differences.Add($"Difference in comment at index {index}:");
-                differences.Add($"File 1: {comment1.InnerText}");
-                differences.Add($"File 2: {comment2.InnerText}");
-            }
-
-            index++;
-        }
-
-        // Check if one document has more comments than the other
-        if (index < comments1.Count)
-        {
-            differences.Add("File 1 has additional comments:");
-            while (index < comments1.Count)
-            {
-                differences.Add(comments1[index].InnerText);
-                index++;
-            }
-        }
-        else if (index < comments2.Count)
-        {
-            differences.Add("File 2 has additional comments:");
-            while (index < comments2.Count)
-            {
-                differences.Add(comments2[index].InnerText);
-                index++;
-            }
-        }
-
-        return differences;
     }
 
     static List<string> CompareElements(IEnumerable<OpenXmlElement> elements1, IEnumerable<OpenXmlElement> elements2)
