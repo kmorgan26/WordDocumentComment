@@ -57,6 +57,10 @@ class Program
                     ConsolidateComments(file1, file2, outputFilePath);
 
                     Console.WriteLine($"Comments consolidated into {outputFilePath}");
+
+                    // Create log file
+                    string logFilePath = Path.Combine(outputDirectory, $"Log_{fileName}.txt");
+                    CreateLogFile(logFilePath, contentDifferences, file1, file2);
                 }
                 else
                 {
@@ -116,6 +120,7 @@ class Program
             mainPart.Document.Save();
         }
     }
+
     static void CopyContentFromDocument(string filePath, MainDocumentPart mainPart)
     {
         using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
@@ -144,7 +149,6 @@ class Program
                         Date = comment.Date,
                         Initials = comment.Initials
                     };
-                    //newComment.Append(new Paragraph(new Run(new Text($"From {sourceDocumentName}: {comment.InnerText}"))));
                     newComment.Append(new Paragraph(new Run(new Text(comment.InnerText))));
                     commentsPart.Comments.Append(newComment);
                 }
@@ -194,4 +198,42 @@ class Program
 
         return differences;
     }
+
+    static void CreateLogFile(string logFilePath, List<string> contentDifferences, string filePath1, string filePath2)
+    {
+        using (StreamWriter writer = new StreamWriter(logFilePath))
+        {
+            writer.WriteLine("Content Differences:");
+            foreach (var diff in contentDifferences)
+            {
+                writer.WriteLine(diff);
+            }
+
+            writer.WriteLine();
+            writer.WriteLine("Comments from Document 1:");
+            WriteCommentsToLog(filePath1, writer);
+
+            writer.WriteLine();
+            writer.WriteLine("Comments from Document 2:");
+            WriteCommentsToLog(filePath2, writer);
+        }
+    }
+
+    static void WriteCommentsToLog(string filePath, StreamWriter writer)
+    {
+        using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
+        {
+            if (doc.MainDocumentPart.WordprocessingCommentsPart != null)
+            {
+                foreach (var comment in doc.MainDocumentPart.WordprocessingCommentsPart.Comments.Elements<Comment>())
+                {
+                    writer.WriteLine($"Author: {comment.Author}");
+                    writer.WriteLine($"Date: {comment.Date}");
+                    writer.WriteLine($"Comment: {comment.InnerText}");
+                    writer.WriteLine(); // Add an empty line between comments for readability
+                }
+            }
+        }
+    }
+
 }
