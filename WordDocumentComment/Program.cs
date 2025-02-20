@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
@@ -10,13 +7,16 @@ class Program
     static void Main(string[] args)
     {
         Console.WriteLine("Enter the path to the first directory:");
-        string directory1 = Console.ReadLine();
+        //string directory1 = Console.ReadLine();
+        string directory1 = "D:\\WordDocs\\folder1";
 
         Console.WriteLine("Enter the path to the second directory:");
-        string directory2 = Console.ReadLine();
+        //string directory2 = Console.ReadLine();
+        string directory2 = "D:\\WordDocs\\folder2";
 
         Console.WriteLine("Enter the path to the output directory for consolidated comments:");
-        string outputDirectory = Console.ReadLine();
+        //string outputDirectory = Console.ReadLine();
+        string outputDirectory = "D:\\WordDocs\\folder3";
 
         if (Directory.Exists(directory1) && Directory.Exists(directory2))
         {
@@ -99,12 +99,32 @@ class Program
             var commentsPart = mainPart.AddNewPart<WordprocessingCommentsPart>();
             commentsPart.Comments = new Comments();
 
+            // Copy content from the first document
+            CopyContentFromDocument(filePath1, mainPart);
+
+            // Copy content from the second document
+            CopyContentFromDocument(filePath2, mainPart);
+
             // Extract comments from both documents and add them to the new document
             AddCommentsFromDocument(filePath1, commentsPart, "Document 1");
             AddCommentsFromDocument(filePath2, commentsPart, "Document 2");
 
+            // Save the comments part
+            commentsPart.Comments.Save();
+
             // Save the new document
             mainPart.Document.Save();
+        }
+    }
+    static void CopyContentFromDocument(string filePath, MainDocumentPart mainPart)
+    {
+        using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
+        {
+            var body = doc.MainDocumentPart.Document.Body;
+            foreach (var element in body.Elements())
+            {
+                mainPart.Document.Body.Append(element.CloneNode(true));
+            }
         }
     }
 
@@ -124,7 +144,8 @@ class Program
                         Date = comment.Date,
                         Initials = comment.Initials
                     };
-                    newComment.Append(new Paragraph(new Run(new Text($"From {sourceDocumentName}: {comment.InnerText}"))));
+                    //newComment.Append(new Paragraph(new Run(new Text($"From {sourceDocumentName}: {comment.InnerText}"))));
+                    newComment.Append(new Paragraph(new Run(new Text(comment.InnerText))));
                     commentsPart.Comments.Append(newComment);
                 }
             }
