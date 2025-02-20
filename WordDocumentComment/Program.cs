@@ -6,17 +6,20 @@ class Program
 {
     static void Main(string[] args)
     {
+        Console.WriteLine("This program compares Word documents from two directories, consolidates their content and comments into a new document, and logs the differences and comments.");
+        Console.WriteLine("Please provide the paths to the two directories containing the Word documents and the output directory for the consolidated document and log files.");
+
         Console.WriteLine("Enter the path to the first directory:");
-        //string directory1 = Console.ReadLine();
-        string directory1 = "D:\\WordDocs\\folder1";
+        string directory1 = Console.ReadLine();
+        //string directory1 = "D:\\WordDocs\\folder1";
 
         Console.WriteLine("Enter the path to the second directory:");
-        //string directory2 = Console.ReadLine();
-        string directory2 = "D:\\WordDocs\\folder2";
+        string directory2 = Console.ReadLine();
+        //string directory2 = "D:\\WordDocs\\folder2";
 
         Console.WriteLine("Enter the path to the output directory for consolidated comments:");
-        //string outputDirectory = Console.ReadLine();
-        string outputDirectory = "D:\\WordDocs\\folder3";
+        string outputDirectory = Console.ReadLine();
+        //string outputDirectory = "D:\\WordDocs\\folder3";
 
         if (Directory.Exists(directory1) && Directory.Exists(directory2))
         {
