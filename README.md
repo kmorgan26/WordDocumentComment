@@ -1,4 +1,5 @@
-# Word Document Comment Consolidator
+# Word Comments Tool
+## I need a better name
 
 ## Description
 This program offers two features:
