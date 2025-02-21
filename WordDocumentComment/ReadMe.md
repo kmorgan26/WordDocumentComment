@@ -26,6 +26,8 @@ This program offers two features:
    - The output directory where the consolidated document and log files will be saved.
 
 
+
+
 ### Feature 2: Comments to CSV
 1. Follow the prompt to enter the path to the directory containing the Word documents.
 2. The program will extract comments from all Word documents in the specified directory and write them to a CSV file named `Comments.csv` in the same directory.
