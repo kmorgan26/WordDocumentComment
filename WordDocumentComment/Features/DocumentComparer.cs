@@ -1,8 +1,17 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 
+/// <summary>
+/// Provides methods to compare Word documents and identify differences.
+/// </summary>
 public static class DocumentComparer
 {
+    /// <summary>
+    /// Compares the content of two Word documents and returns a list of differences.
+    /// </summary>
+    /// <param name="filePath1">The file path of the first Word document.</param>
+    /// <param name="filePath2">The file path of the second Word document.</param>
+    /// <returns>A list of differences between the two documents.</returns>
     public static List<string> CompareWordDocuments(string filePath1, string filePath2)
     {
         var differences = new List<string>();
@@ -19,6 +28,12 @@ public static class DocumentComparer
         return differences;
     }
 
+    /// <summary>
+    /// Compares the elements of two Word document bodies and returns a list of differences.
+    /// </summary>
+    /// <param name="elements1">The elements of the first document body.</param>
+    /// <param name="elements2">The elements of the second document body.</param>
+    /// <returns>A list of differences between the elements of the two document bodies.</returns>
     private static List<string> CompareElements(IEnumerable<OpenXmlElement> elements1, IEnumerable<OpenXmlElement> elements2)
     {
         var differences = new List<string>();
