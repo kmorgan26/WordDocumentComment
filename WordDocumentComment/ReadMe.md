@@ -54,4 +54,4 @@ This program offers two features:
 This project is licensed under the MIT License.
 
 ## Contact
-For any questions or issues, please contact [Your Name] at [Your Email].
+For any questions or issues, please contact Kevin at my Gmail. Same name as my Github.
