@@ -1,8 +1,17 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
+/// <summary>
+/// Provides methods to consolidate comments from multiple Word documents.
+/// </summary>
 public static class CommentConsolidator
 {
+    /// <summary>
+    /// Consolidates comments from two Word documents into a new document.
+    /// </summary>
+    /// <param name="filePath1">The file path of the first Word document.</param>
+    /// <param name="filePath2">The file path of the second Word document.</param>
+    /// <param name="outputFilePath">The file path for the output consolidated document.</param>
     public static void ConsolidateComments(string filePath1, string filePath2, string outputFilePath)
     {
         // Create a new Word document for consolidated comments
@@ -34,6 +43,11 @@ public static class CommentConsolidator
         }
     }
 
+    /// <summary>
+    /// Copies the content from a Word document to the main part of a new document.
+    /// </summary>
+    /// <param name="filePath">The file path of the source Word document.</param>
+    /// <param name="mainPart">The main document part of the new document.</param>
     private static void CopyContentFromDocument(string filePath, MainDocumentPart mainPart)
     {
         using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
@@ -46,6 +60,12 @@ public static class CommentConsolidator
         }
     }
 
+    /// <summary>
+    /// Extracts comments from a Word document and adds them to the comments part of a new document.
+    /// </summary>
+    /// <param name="filePath">The file path of the source Word document.</param>
+    /// <param name="commentsPart">The comments part of the new document.</param>
+    /// <param name="sourceDocumentName">The name of the source document to include in the comment metadata.</param>
     private static void AddCommentsFromDocument(string filePath, WordprocessingCommentsPart commentsPart, string sourceDocumentName)
     {
         using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
@@ -69,6 +89,9 @@ public static class CommentConsolidator
         }
     }
 
+    /// <summary>
+    /// Compares Word documents from two directories, consolidates their content and comments into a new document, and logs the differences and comments.
+    /// </summary>
     public static void CompareAndConsolidateComments()
     {
         Console.WriteLine("This program compares Word documents from two directories, consolidates their content and comments into a new document, and logs the differences and comments.");
