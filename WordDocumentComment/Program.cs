@@ -1,8 +1,4 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
-
-class Program
+﻿class Program
 {
     static void Main(string[] args)
     {
@@ -41,7 +37,7 @@ class Program
                     Console.WriteLine($"Comparing {file1} and {file2}...");
 
                     // Compare document content
-                    var contentDifferences = CompareWordDocuments(file1, file2);
+                    var contentDifferences = DocumentComparer.CompareWordDocuments(file1, file2);
                     if (contentDifferences.Count == 0)
                     {
                         Console.WriteLine("No differences in document content found.");
@@ -57,13 +53,13 @@ class Program
 
                     // Consolidate comments into a new document
                     string outputFilePath = Path.Combine(outputDirectory, $"ConsolidatedComments_{fileName}");
-                    ConsolidateComments(file1, file2, outputFilePath);
+                    CommentConsolidator.ConsolidateComments(file1, file2, outputFilePath);
 
                     Console.WriteLine($"Comments consolidated into {outputFilePath}");
 
                     // Create log file
                     string logFilePath = Path.Combine(outputDirectory, $"Log_{fileName}.txt");
-                    CreateLogFile(logFilePath, contentDifferences, file1, file2);
+                    Logger.CreateLogFile(logFilePath, contentDifferences, file1, file2);
                 }
                 else
                 {
@@ -76,167 +72,4 @@ class Program
             Console.WriteLine("One or both directories do not exist.");
         }
     }
-
-    static List<string> CompareWordDocuments(string filePath1, string filePath2)
-    {
-        var differences = new List<string>();
-
-        using (WordprocessingDocument doc1 = WordprocessingDocument.Open(filePath1, false))
-        using (WordprocessingDocument doc2 = WordprocessingDocument.Open(filePath2, false))
-        {
-            var body1 = doc1.MainDocumentPart.Document.Body;
-            var body2 = doc2.MainDocumentPart.Document.Body;
-
-            differences.AddRange(CompareElements(body1.Elements(), body2.Elements()));
-        }
-
-        return differences;
-    }
-
-    static void ConsolidateComments(string filePath1, string filePath2, string outputFilePath)
-    {
-        // Create a new Word document for consolidated comments
-        using (WordprocessingDocument newDoc = WordprocessingDocument.Create(outputFilePath, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
-        {
-            // Add main document part
-            var mainPart = newDoc.AddMainDocumentPart();
-            mainPart.Document = new Document(new Body());
-
-            // Add comments part
-            var commentsPart = mainPart.AddNewPart<WordprocessingCommentsPart>();
-            commentsPart.Comments = new Comments();
-
-            // Copy content from the first document
-            CopyContentFromDocument(filePath1, mainPart);
-
-            // Copy content from the second document
-            CopyContentFromDocument(filePath2, mainPart);
-
-            // Extract comments from both documents and add them to the new document
-            AddCommentsFromDocument(filePath1, commentsPart, "Document 1");
-            AddCommentsFromDocument(filePath2, commentsPart, "Document 2");
-
-            // Save the comments part
-            commentsPart.Comments.Save();
-
-            // Save the new document
-            mainPart.Document.Save();
-        }
-    }
-
-    static void CopyContentFromDocument(string filePath, MainDocumentPart mainPart)
-    {
-        using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
-        {
-            var body = doc.MainDocumentPart.Document.Body;
-            foreach (var element in body.Elements())
-            {
-                mainPart.Document.Body.Append(element.CloneNode(true));
-            }
-        }
-    }
-
-    static void AddCommentsFromDocument(string filePath, WordprocessingCommentsPart commentsPart, string sourceDocumentName)
-    {
-        using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
-        {
-            if (doc.MainDocumentPart.WordprocessingCommentsPart != null)
-            {
-                foreach (var comment in doc.MainDocumentPart.WordprocessingCommentsPart.Comments.Elements<Comment>())
-                {
-                    // Clone the comment and add metadata
-                    var newComment = new Comment
-                    {
-                        Id = comment.Id,
-                        Author = comment.Author,
-                        Date = comment.Date,
-                        Initials = comment.Initials
-                    };
-                    newComment.Append(new Paragraph(new Run(new Text(comment.InnerText))));
-                    commentsPart.Comments.Append(newComment);
-                }
-            }
-        }
-    }
-
-    static List<string> CompareElements(IEnumerable<OpenXmlElement> elements1, IEnumerable<OpenXmlElement> elements2)
-    {
-        var differences = new List<string>();
-        var enumerator1 = elements1.GetEnumerator();
-        var enumerator2 = elements2.GetEnumerator();
-
-        int index = 0;
-        while (enumerator1.MoveNext() && enumerator2.MoveNext())
-        {
-            var element1 = enumerator1.Current;
-            var element2 = enumerator2.Current;
-
-            if (element1.InnerText != element2.InnerText)
-            {
-                differences.Add($"Difference at index {index}:");
-                differences.Add($"File 1: {element1.InnerText}");
-                differences.Add($"File 2: {element2.InnerText}");
-            }
-
-            index++;
-        }
-
-        // Check if one document has more elements than the other
-        if (enumerator1.MoveNext())
-        {
-            differences.Add("File 1 has additional content:");
-            while (enumerator1.MoveNext())
-            {
-                differences.Add(enumerator1.Current.InnerText);
-            }
-        }
-        else if (enumerator2.MoveNext())
-        {
-            differences.Add("File 2 has additional content:");
-            while (enumerator2.MoveNext())
-            {
-                differences.Add(enumerator2.Current.InnerText);
-            }
-        }
-
-        return differences;
-    }
-
-    static void CreateLogFile(string logFilePath, List<string> contentDifferences, string filePath1, string filePath2)
-    {
-        using (StreamWriter writer = new StreamWriter(logFilePath))
-        {
-            writer.WriteLine("Content Differences:");
-            foreach (var diff in contentDifferences)
-            {
-                writer.WriteLine(diff);
-            }
-
-            writer.WriteLine();
-            writer.WriteLine("Comments from Document 1:");
-            WriteCommentsToLog(filePath1, writer);
-
-            writer.WriteLine();
-            writer.WriteLine("Comments from Document 2:");
-            WriteCommentsToLog(filePath2, writer);
-        }
-    }
-
-    static void WriteCommentsToLog(string filePath, StreamWriter writer)
-    {
-        using (WordprocessingDocument doc = WordprocessingDocument.Open(filePath, false))
-        {
-            if (doc.MainDocumentPart.WordprocessingCommentsPart != null)
-            {
-                foreach (var comment in doc.MainDocumentPart.WordprocessingCommentsPart.Comments.Elements<Comment>())
-                {
-                    writer.WriteLine($"Author: {comment.Author}");
-                    writer.WriteLine($"Date: {comment.Date}");
-                    writer.WriteLine($"Comment: {comment.InnerText}");
-                    writer.WriteLine(); // Add an empty line between comments for readability
-                }
-            }
-        }
-    }
-
 }
