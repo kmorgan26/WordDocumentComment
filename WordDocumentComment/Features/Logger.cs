@@ -27,6 +27,7 @@ public static class Logger
             Console.WriteLine("The directory does not exist.");
         }
     }
+
     /// <summary>
     /// Creates a log file with content differences and comments from two Word documents.
     /// </summary>
@@ -53,6 +54,7 @@ public static class Logger
             WriteCommentsToLog(filePath2, writer);
         }
     }
+
     /// <summary>
     /// Writes comments from a Word document to a log file.
     /// </summary>
@@ -74,6 +76,7 @@ public static class Logger
             }
         }
     }
+
 
     /// <summary>
     /// Extracts comments from all Word documents in a directory and writes them to a CSV file.
@@ -103,4 +106,5 @@ public static class Logger
             }
         }
     }
+
 }
